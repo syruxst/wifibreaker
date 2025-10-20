@@ -1,0 +1,12 @@
+WifiBreaker Pro - WPA Attack Results
+==================================================
+
+Date: 2025-10-18 21:14:46
+SSID: kasa Baez
+BSSID: 74:93:DA:6B:98:CF
+Channel: 6
+Encryption: WPA2
+
+Password: kasa-baez/38
+
+Handshake file: /tmp/wifibreaker_7493DA6B98CF_cap-01.cap

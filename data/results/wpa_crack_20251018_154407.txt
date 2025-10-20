@@ -1,0 +1,12 @@
+WifiBreaker Pro - WPA Attack Results
+==================================================
+
+Date: 2025-10-18 15:44:07
+SSID: Rosalba
+BSSID: 68:59:11:E8:A8:20
+Channel: 1
+Encryption: WPA2
+
+Password: R3d$S3gura2024!#
+
+Handshake file: /tmp/wifibreaker_685911E8A820_cap-01.cap
