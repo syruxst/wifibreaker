@@ -12,7 +12,6 @@ import os
 import signal
 from pathlib import Path
 
-# Add project root to path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from core.validator import SystemValidator
@@ -73,7 +72,6 @@ class WifiBreaker:
             print(f"{Colors.FAIL}[✗] No se detectaron adaptadores WiFi{Colors.ENDC}")
             sys.exit(1)
         
-        # Use first adapter by default (can be changed in menu)
         adapter = adapters[0]
         print(f"{Colors.SUCCESS}[✓] Adaptador detectado: {adapter['interface']}{Colors.ENDC}")
         print(f"{Colors.INFO}    Driver: {adapter['driver']}{Colors.ENDC}")
@@ -130,22 +128,16 @@ class WifiBreaker:
     def run(self):
         """Main execution flow."""
         try:
-            # Print banner
             print_banner()
             
-            # 1. Check root privileges
             self.check_root()
             
-            # 2. Validate system dependencies
             self.validate_system()
             
-            # 3. Initialize adapter
             adapter = self.initialize_adapter()
             
-            # 4. Enable monitor mode
             mon_interface = self.enable_monitor_mode(adapter)
             
-            # 5. Run main menu
             self.run_main_menu(mon_interface)
             
         except KeyboardInterrupt:

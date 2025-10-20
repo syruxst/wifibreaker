@@ -34,7 +34,6 @@ class AdapterManager:
         """Get list of wireless interfaces."""
         interfaces = []
         
-        # Method 1: Using iwconfig
         code, output, _ = self._execute_command(['iwconfig'])
         if code == 0:
             for line in output.split('\n'):
@@ -43,7 +42,6 @@ class AdapterManager:
                     if interface and interface not in interfaces:
                         interfaces.append(interface)
         
-        # Method 2: Using iw dev (fallback)
         if not interfaces:
             code, output, _ = self._execute_command(['iw', 'dev'])
             if code == 0:
@@ -68,7 +66,6 @@ class AdapterManager:
             'mac_address': 'Unknown'
         }
         
-        # Get driver info
         try:
             with open(f'/sys/class/net/{interface}/device/uevent', 'r') as f:
                 content = f.read()
@@ -78,32 +75,24 @@ class AdapterManager:
         except:
             pass
         
-        # Get MAC address
         code, output, _ = self._execute_command(['cat', f'/sys/class/net/{interface}/address'])
         if code == 0:
             info['mac_address'] = output.strip()
         
-        # Check monitor mode support using iw
         code, output, _ = self._execute_command(['iw', 'list'])
         if code == 0:
-            # Check supported modes
             if 'monitor' in output.lower() or 'Monitor' in output:
                 info['monitor_support'] = True
-            # Also check by trying to list interface capabilities
             code2, output2, _ = self._execute_command(['iw', interface, 'info'])
             if code2 == 0 and 'type managed' in output2.lower():
-                # Even managed interfaces can usually be put in monitor mode
                 info['monitor_support'] = True
         
-        # Check injection support (heuristic based on driver)
         injection_drivers = ['rtl', 'ath', 'rt2', 'rt3', 'rt5', 'iwl', 'mt7']
         if any(driver in info['driver'].lower() for driver in injection_drivers):
             info['injection_support'] = True
         
-        # Get chipset info
         code, output, _ = self._execute_command(['lsusb'])
         if code == 0:
-            # Try to match chipset from USB info
             for line in output.split('\n'):
                 if 'wireless' in line.lower() or '802.11' in line.lower():
                     parts = line.split(': ')
@@ -179,12 +168,10 @@ class AdapterManager:
             'power': None
         }
         
-        # Check if interface is up
         code, output, _ = self._execute_command(['ip', 'link', 'show', interface])
         if code == 0 and 'UP' in output:
             status['up'] = True
         
-        # Get current mode and channel
         code, output, _ = self._execute_command(['iwconfig', interface])
         if code == 0:
             mode_match = re.search(r'Mode:(\w+)', output)

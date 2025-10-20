@@ -10,7 +10,6 @@ import os
 import glob
 from typing import List, Dict, Optional
 from dataclasses import dataclass, field
-# Asumo que la importación de ui.colors es correcta
 from ui.colors import Colors, print_info, print_success, print_warning 
 
 
@@ -27,7 +26,7 @@ class WiFiNetwork:
     clients: int = 0
     wps: bool = False
     wps_locked: bool = False
-    clients_list: List[str] = field(default_factory=list) # Esta lista contendrá los MACs ORDENADOS por tráfico
+    clients_list: List[str] = field(default_factory=list) 
     beacons: int = 0
     data_packets: int = 0
     
@@ -83,11 +82,9 @@ class NetworkScanner:
             with open(csv_file, 'r', errors='ignore') as f:
                 content = f.read()
             
-            # Normalizar saltos de línea y dividir en secciones
             content_normalized = content.replace('\r\n', '\n')
             parts = content_normalized.split('\n\n')
             
-            # Lógica para manejar el split robusto
             if len(parts) < 2:
                 if 'Station MAC, First time seen' in content_normalized:
                     parts = content_normalized.split('Station MAC, First time seen')
@@ -99,8 +96,6 @@ class NetworkScanner:
                 ap_section = parts[0]
                 station_section = parts[1] if len(parts) > 1 else ""
 
-            # Parse Access Points
-            # 💡 CORRECCIÓN: Cambiar de [2:] a [1:] para leer la primera línea de datos.
             for line in ap_section.split('\n')[1:]:  
                 if not line.strip() or line.strip().startswith('BSSID'):
                     continue
@@ -114,9 +109,7 @@ class NetworkScanner:
                     if not bssid or ':' not in bssid:
                         continue
                     
-                    # Parse network details
                     channel = int(parts[3]) if parts[3].strip().isdigit() else 0
-                    # parts[8] es el campo Power que se traduce a Signal (dBm)
                     signal = int(parts[8]) if parts[8].strip().lstrip('-').isdigit() else -100 
                     encryption = parts[5]
                     cipher = parts[6]
@@ -125,7 +118,6 @@ class NetworkScanner:
                     data = int(parts[10]) if parts[10].strip().isdigit() else 0
                     ssid = parts[13] if len(parts) > 13 else ""
                     
-                    # Create or update network
                     if bssid not in self.networks:
                         self.networks[bssid] = WiFiNetwork(
                             bssid=bssid,
@@ -139,7 +131,6 @@ class NetworkScanner:
                             data_packets=data
                         )
                     else:
-                        # Update existing
                         net = self.networks[bssid]
                         net.signal = signal
                         net.beacons = beacons
@@ -150,33 +141,25 @@ class NetworkScanner:
                 except (ValueError, IndexError, Exception):
                     continue
             
-            # Parse Stations (clients)
-            # USAMOS ESTA ESTRUCTURA PARA ALMACENAR EL TRAFICO (PAQUETES) Y LUEGO ORDENAR
-            # {BSSID: [(client_mac, packets)]}
             client_data_map: Dict[str, List[tuple[str, int]]] = {} 
             
-            # 💡 CORRECCIÓN: Cambiar de [2:] a [1:] para leer la primera línea de datos.
             for line in station_section.split('\n')[1:]:
                 if not line.strip() or line.strip().startswith('Station MAC'):
                     continue
                 
                 parts = [p.strip() for p in line.split(',')]
-                # Necesitamos al menos 6 campos. El índice 3 es el conteo de paquetes del cliente.
                 if len(parts) < 6: 
                     continue
                 
                 try:
                     station_mac = parts[0]
                     connected_bssid = parts[5]
-                    # Indice 3: # Packets del cliente
                     packets = int(parts[3]) if parts[3].strip().lstrip('-').isdigit() else 0 
                     
                     if connected_bssid and ':' in connected_bssid:
                         if connected_bssid not in client_data_map:
                             client_data_map[connected_bssid] = []
                         
-                        # Almacenar el par (MAC, Paquetes)
-                        # Verificamos si el MAC ya existe para evitar duplicados si airodump repite líneas
                         macs_in_list = [mac for mac, p in client_data_map[connected_bssid]]
                         if station_mac not in macs_in_list:
                             client_data_map[connected_bssid].append((station_mac, packets))
@@ -184,29 +167,22 @@ class NetworkScanner:
                 except (ValueError, IndexError, Exception):
                     continue
             
-            # Update network clients and SORT THEM by packets
             for bssid, client_list in client_data_map.items():
                 if bssid in self.networks:
                     
-                    # LÓGICA CLAVE: Ordenar por conteo de paquetes (índice 1 de la tupla) DESCENDENTE
                     client_list.sort(key=lambda x: x[1], reverse=True)
                     
-                    # Asignar la lista de solo MACs (ya ordenados) a la red
                     self.networks[bssid].clients_list = [mac for mac, packets in client_list]
                     self.networks[bssid].clients = len(self.networks[bssid].clients_list)
         
         except FileNotFoundError:
-             # Se ignora la excepción si el archivo aún no existe al inicio del escaneo
              pass
         except Exception as e:
             print_warning(f"Error general al intentar parsear: {e}")
     
     def _scan_worker(self, duration: int, channels: Optional[List[int]] = None):
         """Worker thread for scanning."""
-        # Se elimina la definición estática de csv_file aquí
         
-        # Build airodump command
-        # 💡 CORRECCIÓN: Se añadió 'sudo' y se eliminan las redirecciones a DEVNULL
         cmd = ['sudo', 'airodump-ng', self.interface, '-w', self.capture_file, '--output-format', 'csv']
         
         if channels:
@@ -215,29 +191,22 @@ class NetworkScanner:
         try:
             print_info(f"DEBUG: Ejecutando airodump-ng: {' '.join(cmd)}") 
             
-            # Start airodump
             process = subprocess.Popen(
                 cmd,
-                # Permitiendo que airodump use stdout/stderr.
             )
             
-            # Scan for specified duration
             start_time = time.time()
             time.sleep(5) 
             
             while self.scanning and (time.time() - start_time < duration):
                 time.sleep(1)
                 
-                # --- CORRECCIÓN: Encontrar el archivo CSV más reciente ---
                 list_of_files = glob.glob(f"{self.capture_file}-*.csv")
                 
                 if list_of_files:
-                    # Ordena por el timestamp de modificación y toma el más reciente
                     latest_file = max(list_of_files, key=os.path.getctime)
                     self._parse_airodump_csv(latest_file)
-                # -----------------------------------------------------------
             
-            # Kill airodump
             print_info("Señalando a airodump-ng para que termine...")
             process.terminate()
             try:
@@ -246,9 +215,7 @@ class NetworkScanner:
                 print_warning("airodump-ng no terminó, enviando señal de KILL.")
                 process.kill()
             
-            # Final parse
             time.sleep(1)
-            # Lectura final
             list_of_files = glob.glob(f"{self.capture_file}-*.csv")
             if list_of_files:
                 latest_file = max(list_of_files, key=os.path.getctime)
@@ -334,21 +301,17 @@ class NetworkScanner:
         print(f"{Colors.HEADER}║                           Redes WiFi Detectadas ({len(networks)})                                     ║{Colors.ENDC}")
         print(f"{Colors.HEADER}╚═══════════════════════════════════════════════════════════════════════════════════════╝{Colors.ENDC}\n")
         
-        # Header
         print(f"{Colors.BOLD}{'#':<3} {'BSSID':<17} {'SSID':<25} {'CH':<3} {'Signal':<8} {'Enc':<6} {'Clients'}{Colors.ENDC}")
         print("─" * 95)
         
-        # Networks
         for idx, net in enumerate(networks, 1):
             signal_bars = net._signal_to_bars()
             ssid_display = net.ssid[:24] if net.ssid else f"{Colors.WARNING}<Hidden>{Colors.ENDC}"
             
-            # Color code by security
             enc_color = Colors.SUCCESS if net.get_security_type() in ['WPA2', 'WPA3'] else Colors.WARNING
             if net.get_security_type() == 'OPEN':
                 enc_color = Colors.FAIL
             
-            # Color code by signal
             sig_color = Colors.SUCCESS if net.signal >= -60 else Colors.WARNING if net.signal >= -70 else Colors.FAIL
             
             print(f"{idx:<3} {net.bssid:<17} {ssid_display:<25} {net.channel:<3} "

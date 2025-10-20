@@ -44,13 +44,11 @@ class CerberoEngine:
         word = word.lower()
         results = {word, word.upper(), word.capitalize()}
         
-        # Leetspeak completo para palabras largas
         if len(word) > 7:
             leet_word = self.full_leetspeak(word)
             results.update([leet_word, leet_word.capitalize(), leet_word.upper()])
             return list(results)
         
-        # Leetspeak parcial (combinaciones)
         chars_to_replace = [(i, char) for i, char in enumerate(word) if char in self.LEETSPEAK_MAP]
         
         for i in range(1, len(chars_to_replace) + 1):
@@ -91,15 +89,12 @@ class CerberoEngine:
         """Motor 1: Combinaciones simples (estilo RockYou)."""
         passwords = set()
         
-        # Variaciones individuales
         for text in text_words:
             for var in self.apply_variations(text):
                 passwords.add(var)
-                # Con números
                 for num in numeric_words:
                     passwords.add(f"{var}{num}")
         
-        # Permutaciones de 2 palabras
         for w1, w2 in itertools.permutations(text_words, 2):
             for var1 in self.apply_variations(w1):
                 for var2 in self.apply_variations(w2):
@@ -120,7 +115,6 @@ class CerberoEngine:
                         base = f"{var1}{sep}{var2}"
                         passwords.add(base)
                         
-                        # Con números y símbolos
                         for num in numeric_words:
                             for sym in symbols_pre_num:
                                 passwords.add(f"{base}{sym}{num}")
@@ -133,14 +127,12 @@ class CerberoEngine:
         current_year = str(datetime.now().year)
         symbols = ['$', '#', '!', '*', '.', '&', '%', '@']
         
-        # Nombres principales
         names = {n.lower() for n in info["persona_principal"]["nombres"] if n}
         if info["persona_principal"].get("sobrenombre"):
             names.add(info["persona_principal"]["sobrenombre"].lower())
         
         for name in names:
             if len(name) > 1:
-                # Patrón: Primera mayúscula + resto leetspeak
                 leet_base = f"{name[0].upper()}{self.full_leetspeak(name[1:])}"
                 
                 for sym in symbols:
@@ -158,7 +150,6 @@ class CerberoEngine:
             if hijo.get("fecha_nacimiento") and hijo.get("nombres"):
                 year = str(hijo["fecha_nacimiento"].year)
                 
-                # Iniciales de nombres y apellidos
                 initials = "".join([n[0] for n in hijo["nombres"] if n] + 
                                  [a[0] for a in hijo.get("apellidos", []) if a]).lower()
                 
@@ -175,7 +166,6 @@ class CerberoEngine:
         """Motor 5: Permutación de iniciales (Cdck1277kd)."""
         passwords = set()
         
-        # Recopilar todas las iniciales
         all_initials = []
         all_initials.extend([n[0] for n in info.get("persona_principal", {}).get("nombres", []) if n])
         all_initials.extend([n[0] for n in info.get("familia", {}).get("pareja", {}).get("nombres", []) if n])
@@ -183,7 +173,6 @@ class CerberoEngine:
         for hijo in info.get("familia", {}).get("hijos", []):
             all_initials.extend([n[0] for n in hijo.get("nombres", []) if n])
         
-        # Números clave de fechas
         key_numbers = set()
         all_dates = [
             info.get("persona_principal", {}).get("fecha_nacimiento"),
@@ -193,7 +182,6 @@ class CerberoEngine:
         for f_nac in filter(None, all_dates):
             key_numbers.update([f"{f_nac.day:02d}", str(f_nac.year)[2:]])
         
-        # Generar permutaciones
         if len(all_initials) >= 2 and len(key_numbers) >= 2:
             for i in range(3, min(len(all_initials) + 1, 6)):
                 for p_initials in itertools.permutations(all_initials, i):
@@ -204,7 +192,6 @@ class CerberoEngine:
                         number_part = "".join(p_numbers)
                         passwords.add(f"{initial_part_cased}{number_part}")
                         
-                        # Con iniciales restantes
                         remaining = all_initials[:]
                         for char in p_initials:
                             if char in remaining:
@@ -244,12 +231,10 @@ class CerberoEngine:
                         base = f"{m1}{m2}"
                         passwords.add(base)
                         
-                        # Con años
                         for year in years:
                             pass_year = f"{base}{year}"
                             passwords.add(pass_year)
                             
-                            # Con sufijos complejos
                             for suffix in complex_suffixes:
                                 passwords.add(f"{pass_year}{suffix}")
         
@@ -269,7 +254,6 @@ class CerberoEngine:
         """
         self.passwords = set()
         
-        # Extraer palabras base
         base_words = self.extract_base_words(info)
         text_words = [w for w in base_words if not w.isdigit()]
         numeric_words = [w for w in base_words if w.isdigit()]
@@ -277,7 +261,6 @@ class CerberoEngine:
         print(f"  [*] Palabras base encontradas: {len(base_words)}")
         print(f"      Texto: {len(text_words)} | Números: {len(numeric_words)}")
         
-        # Ejecutar motores
         print("\n  [Motor 1] Combinaciones simples...")
         self.passwords.update(self.motor_1_simple_combinations(text_words, numeric_words))
         print(f"      Generadas: {len(self.passwords):,}")
@@ -309,7 +292,6 @@ class CerberoEngine:
         
         print(f"\n  [*] Total generadas: {len(self.passwords):,}")
         
-        # Filtrar por longitud
         filtered = [p for p in self.passwords if min_length <= len(p) <= max_length]
         print(f"  [*] Después de filtrar ({min_length}-{max_length} chars): {len(filtered):,}")
         

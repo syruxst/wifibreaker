@@ -12,19 +12,17 @@ class TargetScorer:
     
     def __init__(self):
         self.weights = {
-            'signal': 0.35,      # 35% - Signal strength
-            'clients': 0.25,     # 25% - Active clients (for handshake capture)
-            'security': 0.20,    # 20% - Security type (easier = higher score)
-            'wps': 0.15,         # 15% - WPS availability
-            'activity': 0.05     # 5% - Network activity
+            'signal': 0.35,      
+            'clients': 0.25,     
+            'security': 0.20,    
+            'wps': 0.15,         
+            'activity': 0.05     
         }
     
     def _score_signal(self, network: WiFiNetwork) -> int:
         """Score based on signal strength (0-100)."""
         signal = network.signal
         
-        # Perfect signal: -30 dBm or better
-        # Unusable signal: -90 dBm or worse
         if signal >= -30:
             return 100
         elif signal >= -50:
@@ -42,27 +40,25 @@ class TargetScorer:
         """Score based on number of connected clients (0-100)."""
         clients = network.clients
         
-        # Sweet spot: 1-3 clients (easy to deauth, guaranteed handshake)
         if clients == 0:
-            return 20  # No clients = harder to get handshake
+            return 20  
         elif 1 <= clients <= 3:
-            return 100  # Perfect
+            return 100  
         elif 4 <= clients <= 10:
-            return 80  # Still good
+            return 80  
         else:
-            return 60  # Many clients = more noise
+            return 60  
     
     def _score_security(self, network: WiFiNetwork) -> int:
         """Score based on security type (0-100)."""
         security = network.get_security_type()
         
-        # Higher score = easier to crack
         security_scores = {
-            'OPEN': 100,    # No password needed
-            'WEP': 95,      # Very easy to crack
-            'WPA': 70,      # Moderate difficulty
-            'WPA2': 60,     # Standard difficulty
-            'WPA3': 30,     # Hard to crack
+            'OPEN': 100,    
+            'WEP': 95,      
+            'WPA': 70,      
+            'WPA2': 60,    
+            'WPA3': 30,     
             'Unknown': 40
         }
         
@@ -71,18 +67,17 @@ class TargetScorer:
     def _score_wps(self, network: WiFiNetwork) -> int:
         """Score based on WPS availability (0-100)."""
         if network.wps and not network.wps_locked:
-            return 100  # WPS available and not locked = easy win
+            return 100  
         elif network.wps and network.wps_locked:
-            return 30   # WPS locked = harder
+            return 30   
         else:
-            return 0    # No WPS
+            return 0    
     
     def _score_activity(self, network: WiFiNetwork) -> int:
         """Score based on network activity (0-100)."""
         beacons = network.beacons
         data = network.data_packets
         
-        # More activity = more packets to work with
         total_packets = beacons + data
         
         if total_packets > 1000:
@@ -102,7 +97,6 @@ class TargetScorer:
         wps_score = self._score_wps(network)
         activity_score = self._score_activity(network)
         
-        # Weighted average
         total_score = (
             signal_score * self.weights['signal'] +
             clients_score * self.weights['clients'] +
@@ -136,7 +130,6 @@ class TargetScorer:
             'success_probability': 0
         }
         
-        # Determine difficulty
         if score >= 80:
             recommendation['difficulty'] = 'Fácil'
             recommendation['success_probability'] = 90
@@ -147,7 +140,6 @@ class TargetScorer:
             recommendation['difficulty'] = 'Difícil'
             recommendation['success_probability'] = 35
         
-        # Recommend attack method
         if security == 'OPEN':
             recommendation['method'] = 'Sin contraseña'
             recommendation['estimated_time'] = 'Instantáneo'

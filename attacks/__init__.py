@@ -1,6 +1,3 @@
-# ============================================================================
-# attacks/__init__.py (ACTUALIZAR ESTE)
-# ============================================================================
 """Attack modules for WifiBreaker Pro."""
 
 from .base_attack import BaseAttack
